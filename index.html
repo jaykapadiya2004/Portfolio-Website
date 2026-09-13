@@ -67,12 +67,6 @@
     background:radial-gradient(circle, rgba(138,3,3,0.26), rgba(138,3,3,0.08) 34%, transparent 68%);
     mix-blend-mode:screen;opacity:0;transform:translate(-50%,-50%);
   }
-  .scroll-progress{
-    position:fixed;left:0;top:0;height:2px;width:100%;z-index:130;
-    background:linear-gradient(90deg,var(--accent),var(--accent-soft),rgba(234,230,220,0.72));
-    transform-origin:left center;transform:scaleX(0);
-    transition:transform .5s cubic-bezier(.65,0,.35,1);
-  }
   .hf{font-family:var(--font-display);}
   .mono{font-family:var(--font-mono);}
   a{color:inherit;text-decoration:none;}
@@ -118,7 +112,7 @@
   /* ---------- nav ---------- */
   header{
     position:fixed;top:0;left:0;right:0;z-index:100;
-    background:rgba(10,11,13,0.72);backdrop-filter:blur(10px);
+    background:transparent;
     border-bottom:1px solid transparent;
     transition:border-color .4s ease;
   }
@@ -158,16 +152,15 @@
   .slide-media{position:absolute;inset:0;z-index:-3;background:#000;}
   .slide-media video{
     position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
-    filter:saturate(0.92) contrast(1.05);
+    filter:saturate(0.92) contrast(1.05) brightness(1.35);
   }
   .slide-overlay{
     position:absolute;inset:0;z-index:-2;
     background:
-      linear-gradient(180deg, rgba(4,5,6,0.55) 0%, rgba(4,5,6,0.18) 30%, rgba(4,5,6,0.35) 62%, rgba(4,5,6,0.96) 100%),
-      radial-gradient(120% 90% at 50% 100%, rgba(4,5,6,0.2), rgba(4,5,6,0.85) 85%);
+      linear-gradient(180deg, rgba(4,5,6,0.35) 0%, rgba(4,5,6,0.08) 30%, rgba(4,5,6,0.22) 62%, rgba(4,5,6,0.88) 100%),
+      radial-gradient(120% 90% at 50% 100%, rgba(4,5,6,0.1), rgba(4,5,6,0.72) 85%);
   }
   .slide-grain{position:absolute;inset:0;z-index:-1;opacity:0.05;mix-blend-mode:overlay;pointer-events:none;}
-  .letterbox{position:absolute;left:0;right:0;top:0;height:clamp(10px,3.4vh,34px);background:#000;z-index:2;pointer-events:none;}
   .hero-orbit{
     position:absolute;right:max(28px,8vw);top:18vh;z-index:0;width:clamp(190px,25vw,350px);aspect-ratio:1;
     border:1px solid rgba(138,3,3,0.36);border-radius:50%;pointer-events:none;opacity:.75;
@@ -271,18 +264,6 @@
   #soundToggle.muted .muted-line{display:block;}
   #soundToggle.muted .wave-line{display:none;}
 
-  /* ---------- section dots ---------- */
-  #navDots{
-    position:fixed;right:26px;top:50%;transform:translateY(-50%);z-index:60;
-    display:flex;flex-direction:column;gap:14px;
-  }
-  #navDots button{
-    width:9px;height:9px;border-radius:50%;border:1px solid var(--line-strong);background:transparent;
-    cursor:pointer;padding:0;transition:background .3s ease,border-color .3s ease,transform .3s ease;
-  }
-  #navDots button.on{background:var(--accent-soft);border-color:var(--accent-soft);transform:scale(1.25);}
-  @media(max-width:640px){ #navDots{display:none;} }
-
   footer{border-top:1px solid var(--line);padding:14px 0;font-size:var(--fs-micro);color:var(--text-dim);}
 
   @media (prefers-reduced-motion: reduce){
@@ -293,7 +274,6 @@
 </head>
 <body>
 
-<div class="scroll-progress" id="scrollProgress"></div>
 <div class="cursor-aura" id="cursorAura"></div>
 
 <div id="preloader">
@@ -328,7 +308,6 @@
 </header>
 
 <div id="slidesViewport"></div>
-<div id="navDots"></div>
 
 <audio id="bgAudio" preload="auto">
   <source src="Elden_Ring_Main_Theme__The_Final_Battle___EPIC_VERSION.mp3" type="audio/mpeg">
@@ -490,7 +469,6 @@ function buildSlide(sec, index){
       <rect width="100%" height="100%" filter="url(#grain-${index})"/>
     </svg>
     ${isHero ? `
-      <div class="letterbox"></div>
       <div class="hero-orbit" aria-hidden="true">
         <span class="orbit-node n1"></span><span class="orbit-node n2"></span><span class="orbit-node n3"></span>
       </div>` : ''}
@@ -513,16 +491,6 @@ const slideEls = SECTIONS.map((sec, i) => {
 });
 const keyToIndex = {};
 SECTIONS.forEach((s, i) => keyToIndex[s.key] = i);
-
-/* nav dots */
-const navDots = document.getElementById('navDots');
-SECTIONS.forEach((sec, i) => {
-  const b = document.createElement('button');
-  b.setAttribute('aria-label', 'Go to ' + sec.key);
-  b.addEventListener('click', () => transitionTo(i));
-  navDots.appendChild(b);
-});
-const dotEls = navDots.querySelectorAll('button');
 
 /* =========================================================================
    TRANSITION ENGINE — no wipe, no animation: scrolling swaps the active
@@ -551,9 +519,7 @@ function activateSlide(newIndex){
 }
 
 function updateChrome(){
-  document.getElementById('scrollProgress').style.transform = `scaleX(${(current + 1) / total})`;
   document.getElementById('siteHeader').classList.toggle('scrolled', current > 0);
-  dotEls.forEach((d, i) => d.classList.toggle('on', i === current));
   document.querySelectorAll('.navlinks a').forEach(a => {
     a.classList.toggle('on', keyToIndex[a.dataset.goto] === current);
   });
