@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Jay Kapadiya — AI/ML Engineer</title>
 <meta name="description" content="Jay Kapadiya. AI/ML Engineer building backend systems and deployment pipelines.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -256,6 +256,50 @@
   @media (prefers-reduced-motion: reduce){
     *{animation:none !important;}
     .cursor-aura{display:none;}
+  }
+
+  /* ---------- phone-view polish ---------- */
+  @media(max-width:760px){
+    .wrap{padding:0 20px;}
+    nav.wrap{height:64px;}
+    .brand{font-size:14px;}
+    .brand .dot{width:6px;height:6px;}
+    .nav-cta{padding:8px 14px;font-size:11.5px;}
+
+    .slide{padding-bottom:22px;}
+    .slide-inner{
+      padding-top:96px;
+      max-height:100dvh;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .slide-inner::-webkit-scrollbar{display:none;}
+    .slide-title{font-size:clamp(30px,9vw,46px);max-width:16ch;}
+    .slide-desc{font-size:14px;margin-top:14px;}
+    .kicker{margin-bottom:10px;}
+    .slide-extra{margin-top:20px;}
+
+    .highlight-list{gap:16px;}
+    .highlight-item h4{font-size:15.5px;}
+    .hero-actions{gap:10px;}
+    .btn-primary,.btn-ghost{padding:13px 20px;font-size:11.5px;}
+
+    .contact-links{gap:10px;}
+    .contact-links a{padding:11px 16px;font-size:12.5px;}
+    .contact-foot{margin-top:24px;}
+
+    .hero-orbit{display:none;}
+
+    #soundToggle{
+      width:44px;height:44px;
+      right:calc(14px + env(safe-area-inset-right));
+      bottom:calc(14px + env(safe-area-inset-bottom));
+    }
+  }
+  @media(max-width:400px){
+    .slide-title{font-size:clamp(27px,10vw,36px);}
+    .highlight-item{grid-template-columns:20px 1fr;gap:10px;}
   }
 </style>
 </head>
@@ -683,14 +727,40 @@ window.addEventListener('wheel', (e) => {
   transitionTo(current + (e.deltaY > 0 ? 1 : -1));
 }, { passive: false });
 
+/* On phones a section's text can be taller than the viewport, so
+   .slide-inner is allowed to scroll internally there (see CSS). These
+   helpers let a swipe scroll that inner content first, and only change
+   sections once the user has hit the top/bottom of it. */
+function scrollableAncestor(el){
+  return el && el.closest ? el.closest('.slide-inner') : null;
+}
+function atScrollBoundary(el, dy){
+  if (!el || el.scrollHeight <= el.clientHeight + 1) return true;
+  if (dy > 0) return el.scrollTop + el.clientHeight >= el.scrollHeight - 1; // swiping up / scrolling further down
+  return el.scrollTop <= 0; // swiping down / scrolling further up
+}
+
 let touchStartY = null;
-window.addEventListener('touchstart', (e) => { touchStartY = e.touches[0].clientY; }, { passive: true });
-window.addEventListener('touchmove', (e) => { e.preventDefault(); }, { passive: false });
+let touchScrollEl = null;
+window.addEventListener('touchstart', (e) => {
+  touchStartY = e.touches[0].clientY;
+  touchScrollEl = scrollableAncestor(e.target);
+}, { passive: true });
+window.addEventListener('touchmove', (e) => {
+  if (touchScrollEl) {
+    const dy = touchStartY - e.touches[0].clientY;
+    if (!atScrollBoundary(touchScrollEl, dy)) return; // let the panel scroll natively
+  }
+  e.preventDefault();
+}, { passive: false });
 window.addEventListener('touchend', (e) => {
   if (touchStartY === null || locked) return;
   const dy = touchStartY - e.changedTouches[0].clientY;
+  const scrollEl = touchScrollEl;
   touchStartY = null;
+  touchScrollEl = null;
   if (Math.abs(dy) < 40) return;
+  if (scrollEl && !atScrollBoundary(scrollEl, dy)) return;
   transitionTo(current + (dy > 0 ? 1 : -1));
 }, { passive: true });
 
@@ -703,9 +773,24 @@ window.addEventListener('keydown', (e) => {
 document.querySelectorAll('[data-goto]').forEach(el => {
   el.addEventListener('click', (e) => {
     e.preventDefault();
+    e.stopPropagation();
     const idx = keyToIndex[el.dataset.goto];
     if (idx !== undefined) transitionTo(idx);
   });
+});
+
+/* Tap/click navigation: right side of the screen = next section (scroll
+   down), left side = previous section (scroll up). Ignored on real
+   links/buttons (which already have their own behaviour) and while the
+   preloader or audio gate is covering the screen. */
+const preloaderEl = document.getElementById('preloader');
+document.addEventListener('click', (e) => {
+  if (locked) return;
+  if (preloaderEl.style.display !== 'none') return;
+  if (audioGate.classList.contains('show')) return;
+  if (e.target.closest('a, button, [data-goto], [data-magnetic], header, #soundToggle')) return;
+  const isRight = e.clientX > window.innerWidth / 2;
+  transitionTo(current + (isRight ? 1 : -1));
 });
 
 /* =========================================================================
