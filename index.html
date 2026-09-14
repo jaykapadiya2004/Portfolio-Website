@@ -141,6 +141,18 @@
   #slidesViewport{
     position:fixed;inset:0;width:100vw;height:100dvh;overflow:hidden;isolation:isolate;
   }
+
+  /* ---------- scroll transitions ---------- */
+  #transitionOverlay{
+    position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden;
+  }
+  #transitionOverlay .t-bar{
+    position:absolute;background:rgba(0,0,0,1);
+  }
+  #transitionOverlay .t-iris{
+    position:absolute;inset:-10%;background:rgba(0,0,0,1);
+    clip-path:circle(0% at 92% 9%);
+  }
   .slide{
     position:absolute;inset:0;width:100%;height:100%;
     display:flex;flex-direction:column;justify-content:flex-end;
@@ -283,6 +295,7 @@
 </header>
 
 <div id="slidesViewport"></div>
+<div id="transitionOverlay" aria-hidden="true"></div>
 
 <audio id="bgAudio" preload="auto">
   <source src="Elden_Ring_Main_Theme__The_Final_Battle___EPIC_VERSION.mp3" type="audio/mpeg">
@@ -475,14 +488,126 @@ const keyToIndex = {};
 SECTIONS.forEach((s, i) => keyToIndex[s.key] = i);
 
 /* =========================================================================
-   TRANSITION ENGINE — no wipe, no animation: scrolling swaps the active
-   slide (video + content) directly. A short lock still stops one big
-   scroll gesture from skipping through several sections at once.
+   TRANSITION ENGINE — every scroll/click swaps sections behind a black,
+   translucent stepped wipe (inspired by a shutter/blinds reveal). Each
+   section gets its own wipe signature — axis, stagger origin, easing,
+   sometimes a skew — so no two sections transition in quite the same way.
+   The wipe never goes fully opaque, so the outgoing frame still ghosts
+   through right up until the swap, and the incoming video is at full
+   clarity the instant the bars clear.
    ========================================================================= */
 let current = 0;
 let locked = false;
 const total = SECTIONS.length;
-const LOCK_MS = 650;
+
+const transitionOverlay = document.getElementById('transitionOverlay');
+
+/* One distinct wipe recipe per section key. `axis` picks vertical bars
+   (columns filling top→down) or horizontal bars (rows filling side→side).
+   `coverFrom` / `revealFrom` are GSAP stagger origins ('start','end',
+   'center','edges') — using a different origin for the reveal than the
+   cover is what keeps each pass from feeling like a mirror image of itself. */
+const TRANSITIONS = {
+  hero:       { axis:'y', bars:11, coverFrom:'edges',  revealFrom:'center', skew:0  },
+  about:      { axis:'x', bars:9,  coverFrom:'start',  revealFrom:'end',    skew:0  },
+  experience: { axis:'y', bars:13, coverFrom:'start',  revealFrom:'start',  skew:-6 },
+  projects:   { axis:'x', bars:11, coverFrom:'center', revealFrom:'edges',  skew:0  },
+  skills:     { axis:'y', bars:9,  coverFrom:'end',     revealFrom:'end',   skew:0  },
+  education:  { type:'iris' },
+  contact:    { axis:'y', bars:15, coverFrom:'start',  revealFrom:'start',  skew:-8 }
+};
+
+function buildBars(cfg){
+  transitionOverlay.innerHTML = '';
+  const n = cfg.bars;
+  const vertical = cfg.axis === 'y';
+  const bars = [];
+  for (let i = 0; i < n; i++){
+    const b = document.createElement('div');
+    b.className = 't-bar';
+    if (vertical){
+      b.style.left = (i * 100 / n) + '%';
+      b.style.top = '0';
+      b.style.width = (100 / n + 0.6) + '%';
+      b.style.height = '100%';
+    } else {
+      b.style.top = (i * 100 / n) + '%';
+      b.style.left = '0';
+      b.style.height = (100 / n + 0.6) + '%';
+      b.style.width = '100%';
+    }
+    transitionOverlay.appendChild(b);
+    bars.push(b);
+  }
+  return bars;
+}
+
+function runBarsTransition(cfg, newIndex){
+  return new Promise((resolve) => {
+    const bars = buildBars(cfg);
+    const vertical = cfg.axis === 'y';
+    const scaleProp = vertical ? 'scaleY' : 'scaleX';
+    const skewProp = vertical ? 'skewX' : 'skewY';
+    const originIn = vertical ? 'top' : 'left';
+    const originOut = vertical ? 'bottom' : 'right';
+
+    gsap.set(bars, { [scaleProp]: 0, transformOrigin: originIn, [skewProp]: 0 });
+
+    gsap.to(bars, {
+      [scaleProp]: 1,
+      [skewProp]: cfg.skew,
+      duration: 0.55,
+      ease: 'power2.in',
+      stagger: { each: 0.42 / cfg.bars, from: cfg.coverFrom },
+      onComplete(){
+        activateSlide(newIndex);
+        gsap.set(bars, { transformOrigin: originOut });
+        gsap.to(bars, {
+          [scaleProp]: 0,
+          [skewProp]: 0,
+          duration: 0.6,
+          ease: 'power3.out',
+          stagger: { each: 0.42 / cfg.bars, from: cfg.revealFrom },
+          onComplete(){
+            transitionOverlay.innerHTML = '';
+            resolve();
+          }
+        });
+      }
+    });
+  });
+}
+
+function runIrisTransition(newIndex){
+  return new Promise((resolve) => {
+    transitionOverlay.innerHTML = '<div class="t-iris"></div>';
+    const iris = transitionOverlay.querySelector('.t-iris');
+    gsap.set(iris, { clipPath: 'circle(0% at 92% 9%)' });
+    gsap.to(iris, {
+      clipPath: 'circle(145% at 92% 9%)',
+      duration: 0.62,
+      ease: 'power3.inOut',
+      onComplete(){
+        activateSlide(newIndex);
+        gsap.set(iris, { clipPath: 'circle(145% at 8% 91%)' });
+        gsap.to(iris, {
+          clipPath: 'circle(0% at 8% 91%)',
+          duration: 0.62,
+          ease: 'power3.inOut',
+          onComplete(){
+            transitionOverlay.innerHTML = '';
+            resolve();
+          }
+        });
+      }
+    });
+  });
+}
+
+function runTransition(newIndex){
+  const cfg = TRANSITIONS[SECTIONS[newIndex].key] || TRANSITIONS.hero;
+  return cfg.type === 'iris' ? runIrisTransition(newIndex) : runBarsTransition(cfg, newIndex);
+}
 
 /* Force a video to start fetching real data (not just metadata) ahead of
    the slide actually becoming visible, so it's already buffered by the
@@ -540,10 +665,9 @@ function updateChrome(){
 function transitionTo(newIndex){
   if (locked || newIndex === current || newIndex < 0 || newIndex >= total) return;
   locked = true;
-  activateSlide(newIndex);
   current = newIndex;
   updateChrome();
-  setTimeout(() => { locked = false; }, LOCK_MS);
+  runTransition(newIndex).then(() => { locked = false; });
 }
 
 /* first slide is already "active" with no transition needed */
