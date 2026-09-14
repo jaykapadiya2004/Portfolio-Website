@@ -137,6 +137,33 @@
   .nav-cta:hover{border-color:var(--accent);background:var(--accent-dim);}
   @media(max-width:820px){ .navlinks{display:none;} }
 
+  /* ---------- rotate-device hint ---------- */
+  .cta-group{display:flex;align-items:center;gap:12px;}
+  .rotate-hint{
+    display:none;position:relative;
+    width:30px;height:30px;align-items:center;justify-content:center;
+    color:var(--accent-soft);cursor:default;
+  }
+  .rotate-hint svg{width:20px;height:20px;animation:rotateHintSpin 2.6s ease-in-out infinite;}
+  .rotate-hint-tip{
+    position:absolute;top:calc(100% + 10px);right:0;
+    background:rgba(10,8,9,0.95);border:1px solid var(--line-strong);
+    color:var(--text-muted);font-family:var(--font-mono);font-size:10.5px;
+    letter-spacing:.03em;white-space:nowrap;padding:7px 10px;
+    opacity:0;transform:translateY(-4px);pointer-events:none;
+    transition:opacity .3s ease, transform .3s ease;
+  }
+  .rotate-hint.show .rotate-hint-tip{opacity:1;transform:translateY(0);}
+  @keyframes rotateHintSpin{
+    0%,18%{transform:rotate(0deg);}
+    50%,68%{transform:rotate(90deg);}
+    100%{transform:rotate(90deg);}
+  }
+  /* only surface it on phones held upright, where landscape would genuinely look better */
+  @media(max-width:820px) and (orientation:portrait){
+    .rotate-hint{display:flex;}
+  }
+
   /* ---------- slides engine ---------- */
   #slidesViewport{
     position:fixed;inset:0;width:100vw;height:100dvh;overflow:hidden;isolation:isolate;
@@ -378,7 +405,17 @@
       <a data-goto="skills">Skills</a>
       <a data-goto="contact">Contact</a>
     </div>
-    <a class="nav-cta" data-magnetic data-goto="contact">Say hello</a>
+    <div class="cta-group">
+      <div id="rotateHint" class="rotate-hint" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="7" y="2" width="10" height="16" rx="2" stroke="currentColor" stroke-width="1.6"/>
+          <path d="M20 9.5a8 8 0 1 1-2.5-5.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          <path d="M20 3v5h-5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span class="rotate-hint-tip">Rotate for the full experience</span>
+      </div>
+      <a class="nav-cta" data-magnetic data-goto="contact">Say hello</a>
+    </div>
   </nav>
 </header>
 
@@ -866,6 +903,24 @@ if (reduceMotion) {
     .to('#preloaderRule', { width: '160px', duration: 0.64, ease: 'power2.out' }, '-=0.26')
     .to({}, { duration: 0.38 });
 }
+
+/* =========================================================================
+   ROTATE HINT — nudges portrait-mode phone users to rotate for landscape.
+   Tooltip auto-shows briefly on load/orientation-change, tap also toggles it.
+   ========================================================================= */
+(function(){
+  const hint = document.getElementById('rotateHint');
+  if(!hint) return;
+  let hideTimer;
+  function flash(){
+    hint.classList.add('show');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => hint.classList.remove('show'), 3200);
+  }
+  window.addEventListener('load', () => setTimeout(flash, 1200));
+  window.addEventListener('orientationchange', () => setTimeout(flash, 400));
+  hint.addEventListener('click', flash);
+})();
 
 /* =========================================================================
    SOUND TOGGLE — controls the background music track only. Slide videos
