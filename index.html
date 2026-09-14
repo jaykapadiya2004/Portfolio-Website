@@ -301,6 +301,50 @@
     .slide-title{font-size:clamp(27px,10vw,36px);}
     .highlight-item{grid-template-columns:20px 1fr;gap:10px;}
   }
+
+  /* ---------- short / landscape phones ---------- */
+  /* catches landscape phones that are WIDER than the 760/820px
+     "phone-view" breakpoints above but very short in height,
+     which is where the title/nav overlap comes from */
+  @media(max-height:500px) and (orientation:landscape){
+    .wrap{padding:0 20px;}
+    nav.wrap{height:52px;}
+    .brand{font-size:13px;}
+    .nav-cta{padding:6px 12px;font-size:11px;}
+    .navlinks{display:none;}
+
+    .slide{padding-bottom:14px;}
+    .slide-inner{
+      padding-top:64px;
+      max-height:100dvh;
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    .slide-inner::-webkit-scrollbar{display:none;}
+    .slide-title{font-size:clamp(22px,6vw,38px);max-width:18ch;}
+    .slide-desc{font-size:12.5px;margin-top:8px;}
+    .kicker{margin-bottom:6px;}
+    .slide-extra{margin-top:12px;}
+
+    .highlight-list{grid-template-columns:1fr 1fr;gap:10px 20px;}
+    .highlight-item h4{font-size:13.5px;margin-bottom:2px;}
+    .highlight-item p{font-size:11.5px;}
+    .hero-actions{gap:8px;}
+    .btn-primary,.btn-ghost{padding:9px 16px;font-size:10.5px;}
+
+    .contact-links{gap:8px;}
+    .contact-links a{padding:8px 14px;font-size:11px;}
+    .contact-foot{margin-top:12px;}
+
+    .hero-orbit,.scroll-cue{display:none;}
+
+    #soundToggle{
+      width:38px;height:38px;
+      right:calc(10px + env(safe-area-inset-right));
+      bottom:calc(10px + env(safe-area-inset-bottom));
+    }
+  }
 </style>
 </head>
 <body>
