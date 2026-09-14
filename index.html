@@ -116,7 +116,7 @@
     border-bottom:1px solid transparent;
     transition:border-color .4s ease;
   }
-  header.scrolled{border-bottom-color:var(--line);}
+  header.scrolled{border-bottom-color:transparent;}
   nav.wrap{
     height:76px;display:flex;align-items:center;justify-content:space-between;
   }
@@ -301,7 +301,7 @@
    / cards / contact). `video` is optional — omit it and it will cycle
    through the 3 available videos automatically.
    ========================================================================= */
-const VIDEO_CYCLE = ['hero-video.mp4', 'margit.mp4', 'Maliketh.mp4'];
+const VIDEO_CYCLE = ['hero-video.mp4', 'margit.mp4', 'Maliketh.mp4','rennala.mp4','Radahn_and_malenia.mp4'];
 
 const SECTIONS = [
   {
@@ -660,20 +660,6 @@ import { animate, press } from 'https://cdn.jsdelivr.net/npm/motion@12/+esm';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (!reduceMotion) {
   animate('.scroll-cue .stem', { scaleY: [0.2, 1, 0.2], opacity: [0.35, 1, 0.35] }, { duration: 1.8, repeat: Infinity, easing: 'ease-in-out' });
-
-  document.body.addEventListener('pointermove', event => {
-    document.querySelectorAll('[data-magnetic]').forEach(el => {
-      const rect = el.getBoundingClientRect();
-      const x = (event.clientX - rect.left - rect.width / 2) / rect.width;
-      const y = (event.clientY - rect.top - rect.height / 2) / rect.height;
-      const dist = Math.hypot(event.clientX - (rect.left + rect.width / 2), event.clientY - (rect.top + rect.height / 2));
-      if (dist < Math.max(rect.width, rect.height) * 1.4) {
-        animate(el, { x: x * 18, y: y * 18 }, { duration: 0.28, easing: 'ease-out' });
-      } else {
-        animate(el, { x: 0, y: 0 }, { duration: 0.48, easing: [0.16, 1, 0.3, 1] });
-      }
-    });
-  });
 
   press('.btn-primary, .btn-ghost, .nav-cta, .contact-links a', element => {
     animate(element, { scale: 0.965 }, { duration: 0.12 });
