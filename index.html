@@ -441,7 +441,7 @@ function buildSlide(sec, index){
 
   slide.innerHTML = `
     <div class="slide-media">
-      <video ${sec.poster ? `poster="${sec.poster}"` : ''} muted loop playsinline preload="${index===0?'auto':'metadata'}">
+      <video ${sec.poster ? `poster="${sec.poster}"` : ''} muted loop playsinline preload="${index<=1?'auto':'metadata'}">
         <source src="${video}" type="video/mp4">
       </video>
     </div>
@@ -484,9 +484,34 @@ let locked = false;
 const total = SECTIONS.length;
 const LOCK_MS = 650;
 
+/* Force a video to start fetching real data (not just metadata) ahead of
+   the slide actually becoming visible, so it's already buffered by the
+   time the user scrolls to it. Safe to call repeatedly / on already-
+   loaded videos — it's a no-op past the first call per video. */
+function preloadVideo(index){
+  if (index < 0 || index >= total) return;
+  const v = slideEls[index].querySelector('video');
+  if (!v || v.dataset.primed) return;
+  v.dataset.primed = '1';
+  v.preload = 'auto';
+  v.load();
+}
+
 function playVideo(el){
   const v = el.querySelector('video');
-  if (v) { v.currentTime = 0; v.play().catch(() => {}); }
+  if (!v) return;
+  const start = () => { v.currentTime = 0; v.play().catch(() => {}); };
+  /* readyState >= 3 (HAVE_FUTURE_DATA) means it can play through the
+     current frame without an immediate stall. If it's not there yet,
+     wait for 'canplay' instead of forcing play on an empty buffer —
+     that stall/catch-up is the lag you're seeing. */
+  if (v.readyState >= 3) {
+    start();
+  } else {
+    v.preload = 'auto';
+    v.addEventListener('canplay', start, { once: true });
+    if (v.readyState === 0) v.load();
+  }
 }
 function pauseVideo(el){
   const v = el.querySelector('video');
@@ -498,6 +523,10 @@ function activateSlide(newIndex){
     if (i === newIndex) { el.classList.add('active'); playVideo(el); }
     else { el.classList.remove('active'); pauseVideo(el); }
   });
+  /* Warm up the videos on either side of the new slide so the *next*
+     scroll (in either direction) doesn't hit an unbuffered video. */
+  preloadVideo(newIndex + 1);
+  preloadVideo(newIndex - 1);
 }
 
 function updateChrome(){
